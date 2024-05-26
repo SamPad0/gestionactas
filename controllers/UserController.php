@@ -1,66 +1,44 @@
 <?php
 
 require_once __DIR__ . '/../models/User.php';
-require_once __DIR__ . '/../database.php';
+require_once __DIR__ . '/../config/auth.php';
 
 class UserController {
-    public function create($username, $password) {
-        return User::create($username, $password);
+    private $db;
+
+    public function __construct($db) {
+        $this->db = $db;
     }
 
-    public function read($id) {
-        return User::read($id);
-    }
+    public function create($data) {
+        // Validar los datos recibidos
+        if (isset($data['username']) && isset($data['password'])) {
+            $user = new User($this->db);
+            $result = $user->create($data['username'], $data['password']);
 
-    public function update($id, $newUsername, $newPassword) {
-        return User::update($id, $newUsername, $newPassword);
-    }
-
-    public function delete($id) {
-        return User::delete($id);
-    }
-
-    // Método para autenticar un usuario
-    public function login($username, $password) {
-        // Aquí va la lógica para autenticar al usuario
-        // Por ejemplo, verificar las credenciales en la base de datos
-
-        // Conexión a la base de datos
-        $conn = connect_to_database();
-
-        // Preparar la consulta para seleccionar el usuario por nombre de usuario
-        $stmt = $conn->prepare("SELECT * FROM usuarios WHERE username = ?");
-        $stmt->bind_param("s", $username);
-
-        // Ejecutar la consulta
-        $stmt->execute();
-
-        // Obtener el resultado de la consulta
-        $result = $stmt->get_result();
-
-        $user = $result->fetch_assoc();
-
-        // Verificar si se encontró un usuario con el nombre de usuario dado
-        if ($result->num_rows > 0) {
-            // Obtener los datos del usuario
-
-    
-            // Verificar si la contraseña proporcionada coincide con la contraseña almacenada en la base de datos
-            if (password_verify($password, $user['password'])) {
-
-                // Las credenciales son válidas
-                $stmt->close();
-                $conn->close();
-                return true;
+            if ($result['status'] === 'success') {
+                return ['status' => 'success', 'message' => 'Usuario creado con éxito'];
+            } else {
+                return ['status' => 'error', 'message' => 'Error al crear el usuario'];
             }
+        } else {
+            return ['status' => 'error', 'message' => 'Datos insuficientes'];
         }
+    }
 
-        // Cerrar la conexión y liberar los recursos
-        $stmt->close();
-        $conn->close();
-
-        // Si las credenciales no son válidas o el usuario no existe, devolver false
-        return false;
+    public function login($data) {
+        // Validar los datos recibidos
+        if (isset($data['username']) && isset($data['password'])) {
+            $user = new User($this->db);
+            if ($user->authenticate($data['username'], $data['password'])) {
+                $token = Auth::createToken(['username' => $data['username']]);
+                return ['status' => 'success', 'token' => $token];
+            } else {
+                return ['status' => 'error', 'message' => 'Credenciales incorrectas'];
+            }
+        } else {
+            return ['status' => 'error', 'message' => 'Datos insuficientes'];
+        }
     }
 }
 

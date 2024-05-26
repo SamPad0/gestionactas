@@ -1,68 +1,59 @@
 <?php
 
-require_once __DIR__ . '/../database.php';
-
 class User {
-    // Método para crear un nuevo usuario
-    public static function create($username, $password) {
-        $conn = connect_to_database();
+    private $db;
+
+    public function __construct($db) {
+        $this->db = $db;
+    }
+
+    public function create($username, $password) {
+        // Hash de la contraseña antes de almacenarla en la base de datos
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        $sql = "INSERT INTO usuarios (username, password) VALUES ('$username', '$hashed_password')";
-        $result = $conn->query($sql);
-        $conn->close();
-        return $result;
-    }
 
-    // Método para leer los detalles de un usuario por su ID
-    public static function read($id) {
-        $conn = connect_to_database();
-        $sql = "SELECT * FROM usuarios WHERE id = $id";
-        $result = $conn->query($sql);
-        $conn->close();
-        return $result->fetch_assoc();
-    }
+        // Insertar el usuario en la base de datos
+        $stmt = $this->db->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+        $stmt->bind_param("ss", $username, $hashed_password);
 
-    // Método para actualizar los datos de un usuario
-    public static function update($id, $newUsername, $newPassword) {
-        $conn = connect_to_database();
-        $hashed_password = password_hash($newPassword, PASSWORD_DEFAULT);
-        $sql = "UPDATE usuarios SET username = '$newUsername', password = '$hashed_password' WHERE id = $id";
-        $result = $conn->query($sql);
-        $conn->close();
-        return $result;
-    }
-
-    // Método para eliminar un usuario por su ID
-    public static function delete($id) {
-        $conn = connect_to_database();
-        $sql = "DELETE FROM usuarios WHERE id = $id";
-        $result = $conn->query($sql);
-        $conn->close();
-        return $result;
-    }
-
-    // Método para buscar un usuario por su nombre de usuario
-    public static function findByUsername($username) {
-        $conn = connect_to_database();
-        $sql = "SELECT * FROM usuarios WHERE username = '$username'";
-        $result = $conn->query($sql);
-        $conn->close();
-        return $result->fetch_assoc();
-    }
-
-    // Método para autenticar un usuario por su nombre de usuario y contraseña
-    public static function login($username, $password) {
-        $user = self::findByUsername($username);
-        if ($user && password_verify($password, $user['password'])) {
-            // Las credenciales son válidas
-            return true;
+        if ($stmt->execute()) {
+            return ['status' => 'success'];
         } else {
-            // Las credenciales son inválidas
-            return false;
+            return ['status' => 'error', 'message' => 'Error al crear el usuario'];
         }
     }
 
-    // Otros métodos adicionales según las necesidades de tu aplicación
+    public function authenticate($username, $password) {
+        // Obtener la contraseña hash del usuario desde la base de datos
+        $stmt = $this->db->prepare("SELECT password FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            $stored_password = $user['password'];
+
+            // Verificar si la contraseña proporcionada coincide con la almacenada en la base de datos
+            if (password_verify($password, $stored_password)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function getByUsername($username) {
+        // Obtener información del usuario por su nombre de usuario
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 1) {
+            return $result->fetch_assoc();
+        } else {
+            return null;
+        }
+    }
 }
 
 ?>

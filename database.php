@@ -1,18 +1,32 @@
 <?php
 
-$host = "localhost";
-$usuario = "root";
-$password = "";
-$basededatos = "gestionactas";
+class Database {
+    private static $instance = null;
+    private $conn;
 
-function connect_to_database() {
-    global $host, $usuario, $password, $basededatos;
-    $conexion = new mysqli($host, $usuario, $password, $basededatos);
-    
-    if ($conexion->connect_error) {
-        die("Conexión no establecida: " . $conexion->error);
+    private $host = 'localhost';
+    private $username = 'root';
+    private $password = '';
+    private $database = 'gestionactas';
+
+    private function __construct() {
+        $this->conn = new mysqli($this->host, $this->username, $this->password, $this->database);
+
+        if ($this->conn->connect_error) {
+            die("Connection failed: " . $this->conn->connect_error);
+        }
     }
-    return $conexion;
-}
 
+    public static function getInstance() {
+        if (!self::$instance) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    public function getConnection() {
+        return $this->conn;
+    }
+}
 ?>

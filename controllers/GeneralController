@@ -1,0 +1,64 @@
+<?php
+
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../models/Acta.php';
+require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/Asistente.php';
+require_once __DIR__ . '/../models/Compromiso.php';
+
+class GeneralController {
+    private $db;
+
+    public function __construct($db) {
+        $this->db = $db;
+    }
+
+    public function handleRequest($requestData) {
+        if (isset($requestData['action'])) {
+            $action = $requestData['action'];
+
+            switch ($action) {
+                case 'create_acta':
+                    return $this->createActa($requestData);
+                case 'create_user':
+                    return $this->createUser($requestData);
+                case 'create_compromiso':
+                    return $this->createCompromiso($requestData);
+                case 'add_asistente':
+                    return $this->addAsistente($requestData);
+                case 'login':
+                    return $this->login($requestData);
+                default:
+                    return ['status' => 'error', 'message' => 'Acción no válida'];
+            }
+        }
+        return ['status' => 'error', 'message' => 'No se proporcionó ninguna acción'];
+    }
+
+    private function createActa($data) {
+        $actaController = new ActaController($this->db);
+        return $actaController->create($data);
+    }
+
+    private function createUser($data) {
+        $userController = new UserController($this->db);
+        return $userController->create($data);
+    }
+
+    private function createCompromiso($data) {
+        $compromisoController = new CompromisoController($this->db);
+        return $compromisoController->create($data);
+    }
+
+    private function addAsistente($data) {
+        $asistenteController = new AsistenteController($this->db);
+        return $asistenteController->create($data);
+    }
+
+    private function login($data) {
+        $userController = new UserController($this->db);
+        return $userController->login($data);
+    }
+}
+
+?>
